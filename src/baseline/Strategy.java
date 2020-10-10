@@ -25,7 +25,7 @@ public class Strategy implements Comparable<Strategy> {
 
         // Randomly choose battlefields from each parent to copy to child up to troop count of player
         Random random = new Random();
-        int remainingTroops = troopCount, battlefield;
+        int remainingTroops = troopCount, battlefield = -1;
         for (int i = 0; i < strategy.length && remainingTroops > 0; i++) {
             // Select which parent to take troops from
             Strategy parent = parents[random.nextInt(parents.length)];
@@ -39,11 +39,10 @@ public class Strategy implements Comparable<Strategy> {
             strategy[battlefield] = parent.getBattlefieldTroops(battlefield);
 
             remainingTroops -= parent.getBattlefieldTroops(battlefield);
-
-            // Add remaining troops to last visited battlefield
-            if (i == strategy.length - 1) {
-                strategy[battlefield] += remainingTroops;
-            }
+        }
+        // Ensure troop count for action is correct. Add or subtract the last battlefield visited
+        if (remainingTroops != 0) {
+            strategy[battlefield] += remainingTroops;
         }
     }
 
