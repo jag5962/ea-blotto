@@ -6,6 +6,7 @@ import java.util.Random;
 public class EA {
     private static final double ELITISM_RATE = .05;
     private static final double MUTATION_RATE = .05;
+    private static Random random = new Random();
 
     public static void evaluate(StrategyPool[] strategyPools) {
         // Calculate every strategy's utility
@@ -15,7 +16,6 @@ public class EA {
 
     public static StrategyPool[] evolve(StrategyPool[] strategyPools) {
         StrategyPool[] newStrategyPools = new StrategyPool[strategyPools.length];
-        Random random = new Random();
 
         for (int i = 0; i < strategyPools.length; i++) {
             // Use a set to prohibit duplicate strategies
@@ -53,7 +53,6 @@ public class EA {
     }
 
     private static Strategy[] selectParents(StrategyPool strategyPool) {
-        Random random = new Random();
         int parent1Index = random.nextInt(5), parent2Index;
         do {
             parent2Index = random.nextInt(5);
@@ -66,7 +65,6 @@ public class EA {
     }
 
     private static void mutation(Strategy strategy) {
-        Random random = new Random();
         int battlefield1 = random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS), battlefield2;
         do {
             battlefield2 = random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS);

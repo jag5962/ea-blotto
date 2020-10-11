@@ -1,5 +1,7 @@
 package baseline;
 
+import java.util.Arrays;
+
 public class ColonelBlotto {
     public static final int NUMBER_OF_BATTLEFIELDS = 10;
     public static int[] BATTLEFIELD_PAYOFFS = new int[NUMBER_OF_BATTLEFIELDS];
@@ -7,9 +9,7 @@ public class ColonelBlotto {
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
 
-        for (int i = 0; i < NUMBER_OF_BATTLEFIELDS; ) {
-            BATTLEFIELD_PAYOFFS[i] = ++i;
-        }
+        Arrays.setAll(BATTLEFIELD_PAYOFFS, i -> i + 1);
         StrategyPool[] strategyPools = new StrategyPool[]{
                 new StrategyPool(200, 100),
                 new StrategyPool(100, 100)

@@ -1,6 +1,8 @@
 package baseline;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Stack;
 import java.util.Random;
 
 public class Strategy implements Comparable<Strategy> {
@@ -23,6 +25,13 @@ public class Strategy implements Comparable<Strategy> {
     public Strategy(Strategy[] parents, int troopCount) {
         strategy = new int[ColonelBlotto.NUMBER_OF_BATTLEFIELDS];
 
+        // Stack to hold battlefield indices for random selection
+        Stack<Integer> battlefieldIndices = new Stack<>();
+        for (int i = 0; i < strategy.length; i++) {
+            battlefieldIndices.push(i);
+        }
+        Collections.shuffle(battlefieldIndices);
+
         // Randomly choose battlefields from each parent to copy to child up to troop count of player
         Random random = new Random();
         int remainingTroops = troopCount, battlefield = -1;
@@ -31,9 +40,7 @@ public class Strategy implements Comparable<Strategy> {
             Strategy parent = parents[random.nextInt(parents.length)];
 
             // Select which battlefield to take troops from
-            do {
-                battlefield = random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS);
-            } while (strategy[battlefield] > 0);
+            battlefield = battlefieldIndices.pop();
 
             // Copy troops to battlefield of child strategy
             strategy[battlefield] = parent.getBattlefieldTroops(battlefield);
