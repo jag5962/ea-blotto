@@ -6,9 +6,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 
 public class StrategyPool implements Iterable<Strategy> {
-    private final Strategy[] strategyPool;
-    private final int troopCount;
-    private double opponentStrategyPoolSize;
+    private final Strategy[] strategyPool;      // Hold all the strategies
+    private final int troopCount;               // Used in crossover for child to have same
+    private double opponentStrategyPoolSize;    // Used to determine utility percentage
+    private double positiveUtilitySum;          // Used in selection of parents
 
     // Initialize strategy pool of random strategies
     public StrategyPool(int size, int troopCount) {
@@ -18,12 +19,14 @@ public class StrategyPool implements Iterable<Strategy> {
         }
         strategyPool = strategySet.toArray(new Strategy[0]);
         this.troopCount = troopCount;
+        positiveUtilitySum = 0;
     }
 
-    // Construct next generation for previous strategy pool
+    // Construct next generation from previous strategy pool
     public StrategyPool(HashSet<Strategy> strategySet, int troopCount) {
         strategyPool = strategySet.toArray(new Strategy[0]);
         this.troopCount = troopCount;
+        positiveUtilitySum = 0;
     }
 
     // Calculate fitness for every strategy
@@ -54,6 +57,9 @@ public class StrategyPool implements Iterable<Strategy> {
                 }
             }
             thisStrategy.setUtility(utility);
+            if (utility > 0) {
+                positiveUtilitySum += utility;
+            }
         }
         Arrays.sort(strategyPool, Comparator.reverseOrder());
         opponentStrategyPoolSize = opponentStrategyPool.size();
@@ -73,6 +79,10 @@ public class StrategyPool implements Iterable<Strategy> {
 
     public int getTroopCount() {
         return troopCount;
+    }
+
+    public double getPositiveUtilitySum() {
+        return positiveUtilitySum;
     }
 
     @Override

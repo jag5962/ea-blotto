@@ -72,7 +72,10 @@ public class StrategyHMC {
 				sum += p_t_i[a];
 			}
 		}
-		if (sum > 1) throw new RuntimeException("Ooops!!!  Need a better mu"); 
+		if (Math.abs(sum - 1) < .0001) { // Fix double precision error
+			sum = 1;
+		}
+		if (sum > 1) throw new RuntimeException("Ooops!!!  Need a better mu");
 		p_t_i[myIndex] = 1 - sum;
 		
 		for (int a = 0; a < p_t_i.length; a++) {

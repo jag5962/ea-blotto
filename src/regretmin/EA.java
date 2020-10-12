@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Stack;
 
 public class EA {
-    private static final double ELITISM_RATE = .05;
+    private static final double ELITISM_RATE = .2;
     private static final double MUTATION_RATE = .05;
 
     public static void evolve(Player loser) {
@@ -18,7 +18,7 @@ public class EA {
         int eliteCount = (int) Math.ceil(ELITISM_RATE * actions.length);
 
         // Copy actions with highest probabilities
-        double[] prob = loser.getLearnedStrategy();
+        double[] prob = loser.getLearnedStrategy().clone();
         for (int i = 0; i < eliteCount; i++) {
             double highest = -1;
             int highestIndex = -1;
@@ -36,8 +36,8 @@ public class EA {
         for (int j = eliteCount; j < actions.length; j++) {
             Action child;
             do {
-                // Select 2 parent strategies for crossover
-                int[][] parents = selectParents(actions);
+                // Select 2 parent strategies for crossover using Roulette wheel selection
+                int[][] parents = selectParents(actions, loser.getLearnedStrategy());
 
                 // Use crossover to produce child strategy
                 child = crossover(parents, loser.getSoldierCount());
@@ -56,13 +56,28 @@ public class EA {
         }
     }
 
-    private static int[][] selectParents(int[][] actions) {
-        int bound = (int) Math.ceil(Math.max(2, actions.length * .2));
-        int parent1Index = Driver.prng.nextInt(bound), parent2Index;
+    private static int[][] selectParents(int[][] actions, double[] learnedStrategy) {
+        // Prepare mapping of crossover probabilities
+        double indexBound1 = Driver.prng.nextDouble(), indexBound2;
         do {
-            parent2Index = Driver.prng.nextInt(bound);
-        } while (parent2Index == parent1Index);
-        return new int[][]{actions[parent1Index], actions[parent2Index]};
+            indexBound2 = Driver.prng.nextDouble();
+        } while (indexBound1 == indexBound2);
+
+        double firstSelector = Math.min(indexBound1, indexBound2);
+        double secondSelector = Math.max(indexBound1, indexBound2);
+
+        // Give actions with higher probabilities a great chance to be selected
+        double sum = 0;
+        int firstSelected = -1, secondSelected = -1;
+        while (sum < secondSelector) {
+            sum += learnedStrategy[++secondSelected];
+
+            // Save lower indexed parent strategy without stopping loop
+            if (firstSelected == -1 && sum >= firstSelector) {
+                firstSelected = secondSelected;
+            }
+        }
+        return new int[][]{actions[firstSelected], actions[secondSelected]};
     }
 
     private static Action crossover(int[][] parents, int soldierCount) {

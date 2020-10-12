@@ -1,7 +1,5 @@
 package regretmin;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
 
 public class Driver {
@@ -104,67 +102,5 @@ public class Driver {
             actions[i][battlefield_size - 1] = remaining;
         }
         return actions;
-    }
-
-    /**
-     * Adjust an allocation that is played less than 1/n of the time
-     * where n is the number of allocations in the strategy
-     *
-     * @param actions  the allocations in the current strategy
-     * @param strategy the probabilities of choosing each allocation
-     */
-    static void adjustAllocations(int[][] actions, double[] strategy, int[][] otherActions, double[] otherStrategy) {
-        ArrayList<Integer> badActionIndexes = new ArrayList<>();
-        ArrayList<Integer> oppActionIndexes = new ArrayList<>();
-        for (int i = 0; i < actions.length; i++) {
-            if (strategy[i] <= 1.0 / strategy.length) {
-                badActionIndexes.add(i);
-            }
-            if (otherStrategy[i] >= 1.0 / strategy.length) {
-                oppActionIndexes.add(i);
-            }
-        }
-
-        int from = oppActionIndexes.get(prng.nextInt(oppActionIndexes.size()));
-        int target = badActionIndexes.get(prng.nextInt(badActionIndexes.size()));
-
-        int[] allocation = new int[BATTLEFIELD_COUNT];
-
-        int soldiersRemaining = SOLDIER_COUNT;
-        for (int j = 0; soldiersRemaining > 0 && j < BATTLEFIELD_COUNT; j++) {
-            int bfield = -1;
-            double payoff = -1;
-            for (int k = 0; k < BATTLEFIELD_COUNT; k++) {
-                if (allocation[k] == 0) {
-                    if (otherActions[from][k] < soldiersRemaining) {
-                        double tmpPayoff = (k + 1.0) / (otherActions[from][k] + 1.0);
-                        if (tmpPayoff > payoff) {
-                            payoff = tmpPayoff;
-                            bfield = k;
-                        }
-                    }
-                }
-            }
-            if (bfield >= 0) {
-                allocation[bfield] = otherActions[from][bfield] + 1;
-                soldiersRemaining -= allocation[bfield];
-                if (soldiersRemaining < 0) throw new RuntimeException();
-            } else
-                j = BATTLEFIELD_COUNT;
-        }
-        while (soldiersRemaining > 0) {
-            int to = prng.nextInt(allocation.length);
-            allocation[to]++;
-            soldiersRemaining--;
-        }
-        // Ensure that this is unique
-        boolean unique = true;
-        for (int i = 0; unique && i < actions.length; i++) {
-            if (Arrays.equals(actions[i], allocation))
-                unique = false;
-        }
-        if (unique) {
-            actions[target] = allocation;
-        }
     }
 }

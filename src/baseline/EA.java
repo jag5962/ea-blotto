@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Random;
 
 public class EA {
-    private static final double ELITISM_RATE = .05;
+    private static final double ELITISM_RATE = .2;
     private static final double MUTATION_RATE = .05;
     private static Random random = new Random();
 
@@ -32,7 +32,7 @@ public class EA {
                     strategySet.add(strategyPools[i].get(j));
                 } else {
                     do {
-                        // Select 2 parent strategies for crossover
+                        // Select 2 parent strategies for crossover using roulette wheel selection
                         Strategy[] parents = selectParents(strategyPools[i]);
 
                         // Use crossover to produce child strategy
@@ -53,11 +53,30 @@ public class EA {
     }
 
     private static Strategy[] selectParents(StrategyPool strategyPool) {
-        int parent1Index = random.nextInt(5), parent2Index;
+        // Summation of this strategy pool's utilities
+        double positiveUtilitySum = strategyPool.getPositiveUtilitySum();
+
+        // Prepare mapping of crossover probabilities
+        double indexBound1 = random.nextDouble(), indexBound2;
         do {
-            parent2Index = random.nextInt(5);
-        } while (parent2Index == parent1Index);
-        return new Strategy[]{strategyPool.get(parent1Index), strategyPool.get(parent2Index)};
+            indexBound2 = random.nextDouble();
+        } while (indexBound1 == indexBound2);
+
+        double firstSelector = Math.min(indexBound1, indexBound2);
+        double secondSelector = Math.max(indexBound1, indexBound2);
+
+        // Give actions with higher probabilities a great chance to be selected
+        double sum = 0;
+        int firstSelected = -1, secondSelected = -1;
+        while (sum < secondSelector) {
+            sum += strategyPool.get(++secondSelected).getUtility() / positiveUtilitySum;
+
+            // Save lower indexed parent strategy without stopping loop
+            if (firstSelected == -1 && sum >= firstSelector) {
+                firstSelected = secondSelected;
+            }
+        }
+        return new Strategy[]{strategyPool.get(firstSelected), strategyPool.get(secondSelected)};
     }
 
     private static Strategy crossover(Strategy[] parents, int troopCount) {
