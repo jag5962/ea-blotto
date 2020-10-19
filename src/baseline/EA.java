@@ -6,87 +6,73 @@ import java.util.Random;
 public class EA {
     private static final double ELITISM_RATE = .2;
     private static final double MUTATION_RATE = .05;
-    private static Random random = new Random();
+    private static final Random RANDOM = new Random();
 
-    public static void evaluate(StrategyPool[] strategyPools) {
-        // Calculate every strategy's utility
-        strategyPools[0].calculateUtility(strategyPools[1]);
-        strategyPools[1].calculateUtility(strategyPools[0]);
-    }
+    public static StrategyPool evolve(StrategyPool loser) {
+        // Use a set to prohibit duplicate strategies
+        HashSet<Strategy> strategySet = new HashSet<>();
 
-    public static StrategyPool[] evolve(StrategyPool[] strategyPools) {
-        StrategyPool[] newStrategyPools = new StrategyPool[strategyPools.length];
+        // Number of individuals to copy to next generation
+        int eliteCount = (int) Math.ceil(ELITISM_RATE * loser.size());
 
-        for (int i = 0; i < strategyPools.length; i++) {
-            // Use a set to prohibit duplicate strategies
-            HashSet<Strategy> strategySet = new HashSet<>();
-
-            // Number of individuals to copy to next generation
-            int eliteCount = (int) Math.ceil(ELITISM_RATE * strategyPools[i].size());
-
-            // Use reproduction and mutation to fill the new strategy pool after elites are copied over
-            Strategy child;
-            for (int j = 0; j < strategyPools[i].size(); j++) {
-                // Copy elites
-                if (j < eliteCount) {
-                    strategySet.add(strategyPools[i].get(j));
-                } else {
-                    do {
-                        // Select 2 parent strategies for crossover using roulette wheel selection
-                        Strategy[] parents = selectParents(strategyPools[i]);
-
-                        // Use crossover to produce child strategy
-                        child = crossover(parents, strategyPools[i].getTroopCount());
-
-                        // Mutate with probability
-                        if (random.nextDouble() < MUTATION_RATE) {
-                            mutation(child);
-                        }
-                    } while (strategySet.contains(child));
-                    strategySet.add(child);
+        // Use reproduction and mutation to fill the new strategy pool after elites are copied over
+        Strategy child;
+        double eliteFitnessSum = 0, childInitialFitness = -1;
+        for (int s = 0; s < loser.size(); s++) {
+            // Copy elites
+            if (s < eliteCount) {
+                strategySet.add(loser.get(s));
+                eliteFitnessSum += loser.get(s).getProbability();
+            } else {
+                // Every child starts with same probability
+                if (childInitialFitness == -1) {
+                    childInitialFitness = (1 - eliteFitnessSum) / (loser.size() - eliteCount);
                 }
-            }
 
-            newStrategyPools[i] = new StrategyPool(strategySet, strategyPools[i].getTroopCount());
-        }
-        return newStrategyPools;
-    }
+                // Guarantee distinct children
+                do {
+                    // Select 2 parent strategies for crossover using roulette wheel selection
+                    Strategy[] parents = selectParents(loser);
 
-    private static Strategy[] selectParents(StrategyPool strategyPool) {
-        // Summation of this strategy pool's utilities
-        double positiveUtilitySum = strategyPool.getPositiveUtilitySum();
+                    // Use crossover to produce child strategy
+                    child = crossover(parents, loser.getTroopCount(), childInitialFitness);
 
-        // Prepare mapping of crossover probabilities
-        double indexBound1 = random.nextDouble(), indexBound2;
-        do {
-            indexBound2 = random.nextDouble();
-        } while (indexBound1 == indexBound2);
-
-        double firstSelector = Math.min(indexBound1, indexBound2);
-        double secondSelector = Math.max(indexBound1, indexBound2);
-
-        // Give actions with higher probabilities a great chance to be selected
-        double sum = 0;
-        int firstSelected = -1, secondSelected = -1;
-        while (sum < secondSelector) {
-            sum += strategyPool.get(++secondSelected).getUtility() / positiveUtilitySum;
-
-            // Save lower indexed parent strategy without stopping loop
-            if (firstSelected == -1 && sum >= firstSelector) {
-                firstSelected = secondSelected;
+                    // Mutate with probability
+                    if (RANDOM.nextDouble() < MUTATION_RATE) {
+                        mutate(child);
+                    }
+                } while (strategySet.contains(child));
+                strategySet.add(child);
             }
         }
-        return new Strategy[]{strategyPool.get(firstSelected), strategyPool.get(secondSelected)};
+
+        return new StrategyPool(strategySet, loser.getTroopCount());
     }
 
-    private static Strategy crossover(Strategy[] parents, int troopCount) {
-        return new Strategy(parents, troopCount);
-    }
-
-    private static void mutation(Strategy strategy) {
-        int battlefield1 = random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS), battlefield2;
+    private static Strategy[] selectParents(StrategyPool loser) {
+        double selector1 = RANDOM.nextDouble(), selector2;
         do {
-            battlefield2 = random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS);
+            selector2 = RANDOM.nextDouble();
+        } while (selector1 == selector2);
+
+        int selection1 = -1, selection2 = -1;
+        while (selection1 < loser.size() - 1 && selector1 > 0) {
+            selector1 -= loser.get(++selection1).getProbability();
+        }
+        while (selection2 < loser.size() - 1 && selector2 > 0) {
+            selector2 -= loser.get(++selection2).getProbability();
+        }
+        return new Strategy[]{loser.get(selection1), loser.get(selection2)};
+    }
+
+    private static Strategy crossover(Strategy[] parents, int troopCount, double initialFitness) {
+        return new Strategy(parents, troopCount, initialFitness);
+    }
+
+    private static void mutate(Strategy strategy) {
+        int battlefield1 = RANDOM.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS), battlefield2;
+        do {
+            battlefield2 = RANDOM.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS);
         } while (battlefield2 == battlefield1);
         strategy.swapTroops(battlefield1, battlefield2);
     }

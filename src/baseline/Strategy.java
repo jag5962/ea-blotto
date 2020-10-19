@@ -7,11 +7,14 @@ import java.util.Random;
 
 public class Strategy implements Comparable<Strategy> {
     private final int[] strategy;
-    private int utility;
+    private double probability;
+    private int utilityThisRound;
+    private int playsThisRound;
 
     // Construct new strategy with random disbursement of troops
-    public Strategy(int troopCount) {
+    public Strategy(int troopCount, double initialFitness) {
         strategy = new int[ColonelBlotto.NUMBER_OF_BATTLEFIELDS];
+        probability = initialFitness;
 
         // Randomly disburse the troops
         Random random = new Random();
@@ -19,11 +22,14 @@ public class Strategy implements Comparable<Strategy> {
         while (remainingTroops-- > 0) {
             strategy[random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS)]++;
         }
+        playsThisRound = 0;
+        utilityThisRound = 0;
     }
 
     // Crossover parents to create child
-    public Strategy(Strategy[] parents, int troopCount) {
+    public Strategy(Strategy[] parents, int troopCount, double initialFitness) {
         strategy = new int[ColonelBlotto.NUMBER_OF_BATTLEFIELDS];
+        probability = initialFitness;
 
         // Stack to hold battlefield indices for random selection
         Stack<Integer> battlefieldIndices = new Stack<>();
@@ -51,22 +57,38 @@ public class Strategy implements Comparable<Strategy> {
         if (remainingTroops != 0) {
             strategy[battlefield] += remainingTroops;
         }
+        playsThisRound = 0;
+        utilityThisRound = 0;
     }
 
-    public void setUtility(int utility) {
-        this.utility = utility;
+    public void updateUtilityThisRound(int utilityThisRound) {
+        playsThisRound++;
+        this.utilityThisRound += utilityThisRound;
     }
 
-    public int getUtility() {
-        return utility;
+    public void resetPlay() {
+        playsThisRound = 0;
+        utilityThisRound = 0;
+    }
+
+    public void setProbability(double probability) {
+        this.probability = probability;
+    }
+
+    public double getProbability() {
+        return probability;
+    }
+
+    public int getUtilityThisRound() {
+        return utilityThisRound;
+    }
+
+    public int getPlaysThisRound() {
+        return playsThisRound;
     }
 
     public int getBattlefieldTroops(int index) {
         return strategy[index];
-    }
-
-    public int getBattleCount() {
-        return strategy.length;
     }
 
     public void swapTroops(int battlefield1, int battlefield2) {
@@ -77,7 +99,7 @@ public class Strategy implements Comparable<Strategy> {
 
     @Override
     public int compareTo(Strategy strategy) {
-        return Integer.compare(utility, strategy.utility);
+        return Double.compare(probability, strategy.probability);
     }
 
     @Override
@@ -99,6 +121,6 @@ public class Strategy implements Comparable<Strategy> {
         for (int battlefieldTroops : strategy) {
             description.append(battlefieldTroops).append("|");
         }
-        return description.toString();
+        return description.append(" Prob: ").append(probability).append("\n").toString();
     }
 }

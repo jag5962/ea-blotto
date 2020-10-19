@@ -1,68 +1,27 @@
 package baseline;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.*;
 
 public class StrategyPool implements Iterable<Strategy> {
     private final Strategy[] strategyPool;      // Hold all the strategies
     private final int troopCount;               // Used in crossover for child to have same
-    private double opponentStrategyPoolSize;    // Used to determine utility percentage
-    private double positiveUtilitySum;          // Used in selection of parents
+    private static final Random RANDOM = new Random();
 
     // Initialize strategy pool of random strategies
     public StrategyPool(int size, int troopCount) {
         HashSet<Strategy> strategySet = new HashSet<>(size);
         while (strategySet.size() < size) {
-            strategySet.add(new Strategy(troopCount));
+            Strategy strategy = new Strategy(troopCount, 1.0 / size);
+            strategySet.add(strategy);
         }
         strategyPool = strategySet.toArray(new Strategy[0]);
         this.troopCount = troopCount;
-        positiveUtilitySum = 0;
     }
 
     // Construct next generation from previous strategy pool
     public StrategyPool(HashSet<Strategy> strategySet, int troopCount) {
         strategyPool = strategySet.toArray(new Strategy[0]);
         this.troopCount = troopCount;
-        positiveUtilitySum = 0;
-    }
-
-    // Calculate fitness for every strategy
-    public void calculateUtility(StrategyPool opponentStrategyPool) {
-        // Calculate average payoff for every strategy in this pool
-        for (Strategy thisStrategy : this) {
-            int utility = 0;
-
-            // Compare strategy to every one of the opponent's strategies
-            for (Strategy opponentStrategy : opponentStrategyPool) {
-                int thisStrategyPayoff = 0, opponentStrategyPayoff = 0;
-                // Compare troops on each battlefield
-                for (int battlefield = 0; battlefield < opponentStrategy.getBattleCount(); battlefield++) {
-                    int thisStrategyTroops = thisStrategy.getBattlefieldTroops(battlefield);
-                    int opponentTroops = opponentStrategy.getBattlefieldTroops(battlefield);
-                    if (thisStrategyTroops > opponentTroops) {
-                        thisStrategyPayoff += ColonelBlotto.BATTLEFIELD_PAYOFFS[battlefield];
-                    } else if (thisStrategyTroops < opponentTroops) {
-                        opponentStrategyPayoff += ColonelBlotto.BATTLEFIELD_PAYOFFS[battlefield];
-                    }
-                }
-
-                // If this strategy wins, this strategy gets 1, else loses 1
-                if (thisStrategyPayoff > opponentStrategyPayoff) {
-                    utility++;
-                } else if (thisStrategyPayoff < opponentStrategyPayoff) {
-                    utility--;
-                }
-            }
-            thisStrategy.setUtility(utility);
-            if (utility > 0) {
-                positiveUtilitySum += utility;
-            }
-        }
-        Arrays.sort(strategyPool, Comparator.reverseOrder());
-        opponentStrategyPoolSize = opponentStrategyPool.size();
     }
 
     public int size() {
@@ -73,16 +32,59 @@ public class StrategyPool implements Iterable<Strategy> {
         return strategyPool[index];
     }
 
-    public Strategy getFittest() {
-        return strategyPool[0];
+    public Strategy getRandom() {
+        double selector = RANDOM.nextDouble();
+        int selection = 0;
+        while (selection < size()) {
+            selector -= get(selection).getProbability();
+            if (selector <= 0) {
+                return get(selection);
+            }
+            selection++;
+        }
+        return get(size() - 1);
     }
 
     public int getTroopCount() {
         return troopCount;
     }
 
-    public double getPositiveUtilitySum() {
-        return positiveUtilitySum;
+    public void resetPlays() {
+        for (Strategy strategy : strategyPool) {
+            strategy.resetPlay();
+        }
+    }
+
+    public void calculateFitness() {
+        double total = 0, least = Double.MAX_VALUE;
+        double[] winPercents = new double[strategyPool.length];
+
+        // Calculate the utility of a strategy per play
+        for (int i = 0; i < strategyPool.length; i++) {
+            winPercents[i] = strategyPool[i].getPlaysThisRound() > 0 ? strategyPool[i].getUtilityThisRound() / (double) strategyPool[i].getPlaysThisRound() : 0;
+            total += winPercents[i];
+
+            // Save lowest win percentage to use for normalization
+            if (winPercents[i] < least) {
+                least = winPercents[i];
+            }
+        }
+
+        // If the lowest win percentage is negative, slide them all so lowest = 0
+        if (least < 0) {
+            total = 0;
+            for (int i = 0; i < winPercents.length; i++) {
+                winPercents[i] -= least;
+                total += winPercents[i];
+            }
+        }
+
+        // Normalize probabilities [0,1]
+        for (int i = 0; i < winPercents.length; i++) {
+            strategyPool[i].setProbability(winPercents[i] / total);
+        }
+
+        Arrays.sort(strategyPool, Collections.reverseOrder());
     }
 
     @Override
@@ -95,8 +97,7 @@ public class StrategyPool implements Iterable<Strategy> {
         StringBuilder description = new StringBuilder();
         int i = 0;
         for (Strategy strategy : strategyPool) {
-            description.append(++i).append(": ").append(strategy).append(" Utility: ")
-                    .append(strategy.getUtility() / opponentStrategyPoolSize).append("\n");
+            description.append(++i).append(": ").append(strategy);
         }
         return description.toString();
     }
