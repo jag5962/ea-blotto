@@ -1,15 +1,20 @@
 package baseline;
 
+/**
+ * The base line for finding optimal mixed strategies in Colonel Blotto. Regret-matching is used to determine the
+ * probabilities for every pure strategy. This instance of Colonel Blotto uses static strategy pool sizes and
+ * distinctly increasing battlefield payoffs.
+ *
+ * @author John Gilbertson
+ */
 public class ColonelBlotto {
-    public static final int NUMBER_OF_BATTLEFIELDS = 10;
+    private static final int NUMBER_OF_BATTLEFIELDS = 10;
     private static final int GAMES = 10;
-    public static final int ROUNDS_PER_GAME = 10000;
+    private static final int ROUNDS_PER_GAME = 10_000;
 
     public static void main(String[] args) {
-        long start = System.currentTimeMillis();
-
-        StrategyPool player1 = new StrategyPool(50, 100);
-        StrategyPool player2 = new StrategyPool(50, 100);
+        StrategyPool player1 = new StrategyPool(NUMBER_OF_BATTLEFIELDS, 50, 100);
+        StrategyPool player2 = new StrategyPool(NUMBER_OF_BATTLEFIELDS, 50, 100);
 
         for (int g = 1; g <= GAMES; g++) {
             int player1Wins = 0, player2Wins = 0;
@@ -32,11 +37,9 @@ public class ColonelBlotto {
                     player2Wins++;
                 }
 
-                player1Strat.updateUtilityThisRound(player1Util);
-                player2Strat.updateUtilityThisRound(player2Util);
+                player1.update(player1Strat, player2Strat, player1Util);
+                player2.update(player2Strat, player1Strat, player2Util);
             }
-            player1.calculateFitness();
-            player2.calculateFitness();
 
             System.out.println("Game " + g);
             System.out.println("Player1 wins: " + player1Wins + ", Player2 wins: " + player2Wins);
@@ -57,24 +60,24 @@ public class ColonelBlotto {
                 player1 = EA.evolve(loser);
             }
 
-            // Reset utility and play count for each strategy
-            winner.resetPlays();
+            // Reset the winner's strategies
+            winner.resetStrategies();
         }
-
-        long durationInMillis = System.currentTimeMillis() - start;
-        long millis = durationInMillis % 1000;
-        long second = (durationInMillis / 1000) % 60;
-        long minute = (durationInMillis / 60000) % 60;
-
-        System.out.printf("%02d:%02d.%d\n", minute, second, millis);
     }
 
-    private static int utility(Strategy player1, Strategy player2) {
+    /**
+     * Play player 1's strategy against player 2's strategy
+     *
+     * @param player1Strat the strategy for player 1
+     * @param player2Strat the strategy for player 2
+     * @return the values 1, -1, or 0 if player 1 wins, loses, or ties, respectively
+     */
+    public static int utility(Strategy player1Strat, Strategy player2Strat) {
         int player1Score = 0, player2Score = 0;
         for (int i = 0; i < NUMBER_OF_BATTLEFIELDS; i++) {
-            if (player1.getBattlefieldTroops(i) > player2.getBattlefieldTroops(i)) {
+            if (player1Strat.getBattlefieldTroops(i) > player2Strat.getBattlefieldTroops(i)) {
                 player1Score += i + 1;
-            } else if (player1.getBattlefieldTroops(i) < player2.getBattlefieldTroops(i)) {
+            } else if (player1Strat.getBattlefieldTroops(i) < player2Strat.getBattlefieldTroops(i)) {
                 player2Score += i + 1;
             }
         }

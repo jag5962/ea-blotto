@@ -3,35 +3,63 @@ package baseline;
 import java.util.*;
 
 public class StrategyPool implements Iterable<Strategy> {
-    private final Strategy[] strategyPool;      // Hold all the strategies
-    private final int troopCount;               // Used in crossover for child to have same
     private static final Random RANDOM = new Random();
+    private final Strategy[] strategyPool;  // Holds the strategies in descending order of average probability
+    private final int troopCount;           // Used in crossover share with resulting child
+    private final int mu;
+    private int timestep;                   // The current timestep
 
-    // Initialize strategy pool of random strategies
-    public StrategyPool(int size, int troopCount) {
-        HashSet<Strategy> strategySet = new HashSet<>(size);
+    /**
+     * Construct a strategy pool of strategies with randomly allocated troops.
+     *
+     * @param numberOfBattlefields the number of battlefields in this instance of Colonel Blotto
+     * @param size                 the number of strategies in the strategy pool
+     * @param troopCount           the number of troops the player can allocate
+     */
+    public StrategyPool(int numberOfBattlefields, int size, int troopCount) {
+        Set<Strategy> strategySet = new HashSet<>(size);
         while (strategySet.size() < size) {
-            Strategy strategy = new Strategy(troopCount, 1.0 / size);
-            strategySet.add(strategy);
+            strategySet.add(new Strategy(numberOfBattlefields, size, troopCount));
         }
         strategyPool = strategySet.toArray(new Strategy[0]);
         this.troopCount = troopCount;
+
+        // Suggested that mu >= ([number of strategies] - 1) * (Max difference in utility)
+        mu = (size - 1) * (1 - (-1));
     }
 
-    // Construct next generation from previous strategy pool
-    public StrategyPool(HashSet<Strategy> strategySet, int troopCount) {
+    /**
+     * Construct a strategy pool from the previous strategy pool.
+     *
+     * @param loser       the losing player's strategy pool
+     * @param strategySet the set of distinct strategies evolved from loser
+     */
+    public StrategyPool(StrategyPool loser, Set<Strategy> strategySet) {
         strategyPool = strategySet.toArray(new Strategy[0]);
-        this.troopCount = troopCount;
+        troopCount = loser.troopCount;
+        mu = loser.mu;
     }
 
+    /**
+     * @return the number of strategies
+     */
     public int size() {
         return strategyPool.length;
     }
 
+    /**
+     * @param index the index of the strategy
+     * @return the strategy at the index
+     */
     public Strategy get(int index) {
         return strategyPool[index];
     }
 
+    /**
+     * Choose the next strategy based on their current probability
+     *
+     * @return the strategy
+     */
     public Strategy getRandom() {
         double selector = RANDOM.nextDouble();
         int selection = 0;
@@ -45,46 +73,62 @@ public class StrategyPool implements Iterable<Strategy> {
         return get(size() - 1);
     }
 
+    /**
+     * Update the accumulated regret and probabilities based on the strategies used
+     *
+     * @param myStrat    the index of hero's action
+     * @param theirStrat the villian's soldier allocation
+     * @param utility    the resulting utility from playing these strategies
+     */
+    public void update(Strategy myStrat, Strategy theirStrat, int utility) {
+        timestep++;
+
+        for (Strategy strat : strategyPool) {
+            myStrat.updatePayoffDifferenceSum(strat, ColonelBlotto.utility(strat, theirStrat) - utility);
+        }
+
+        double sum = 0;
+        for (Strategy strat : strategyPool) {
+            if (strat != myStrat) {
+                int payoffDiffSum = myStrat.getPayoffDifferenceSum(strat);
+                strat.setProbability(payoffDiffSum > 0 ? 1.0 / timestep / mu * payoffDiffSum : 0);
+                sum += strat.getProbability();
+            }
+        }
+
+        // Account for double precision error
+        if (Math.abs(sum - 1) < .00001) {
+            sum = 1;
+        }
+
+        if (sum > 1) {
+            throw new RuntimeException("Ooops!!!  Need a better mu");
+        }
+        myStrat.setProbability(1 - sum);
+
+        for (Strategy strat : strategyPool) {
+            strat.setAverageProb(((timestep - 1) * strat.getAverageProb() + strat.getProbability()) / timestep);
+        }
+
+        // Sort strategies in descending order by their average probabilities
+        Arrays.sort(strategyPool, Collections.reverseOrder());
+    }
+
+    /**
+     * Ready the strategy pool for the next game of Colonel Blotto.
+     */
+    public void resetStrategies() {
+        for (Strategy strategy : strategyPool) {
+            strategy.resetStrategy(size());
+        }
+        timestep = 0;
+    }
+
+    /**
+     * @return the number of troops for this player
+     */
     public int getTroopCount() {
         return troopCount;
-    }
-
-    public void resetPlays() {
-        for (Strategy strategy : strategyPool) {
-            strategy.resetPlay();
-        }
-    }
-
-    public void calculateFitness() {
-        double total = 0, least = Double.MAX_VALUE;
-        double[] winPercents = new double[strategyPool.length];
-
-        // Calculate the utility of a strategy per play
-        for (int i = 0; i < strategyPool.length; i++) {
-            winPercents[i] = strategyPool[i].getPlaysThisRound() > 0 ? strategyPool[i].getUtilityThisRound() / (double) strategyPool[i].getPlaysThisRound() : 0;
-            total += winPercents[i];
-
-            // Save lowest win percentage to use for normalization
-            if (winPercents[i] < least) {
-                least = winPercents[i];
-            }
-        }
-
-        // If the lowest win percentage is negative, slide them all so lowest = 0
-        if (least < 0) {
-            total = 0;
-            for (int i = 0; i < winPercents.length; i++) {
-                winPercents[i] -= least;
-                total += winPercents[i];
-            }
-        }
-
-        // Normalize probabilities [0,1]
-        for (int i = 0; i < winPercents.length; i++) {
-            strategyPool[i].setProbability(winPercents[i] / total);
-        }
-
-        Arrays.sort(strategyPool, Collections.reverseOrder());
     }
 
     @Override
@@ -94,10 +138,10 @@ public class StrategyPool implements Iterable<Strategy> {
 
     @Override
     public String toString() {
-        StringBuilder description = new StringBuilder();
         int i = 0;
+        StringBuilder description = new StringBuilder();
         for (Strategy strategy : strategyPool) {
-            description.append(++i).append(": ").append(strategy);
+            description.append(++i).append(": ").append(strategy).append("\n");
         }
         return description.toString();
     }

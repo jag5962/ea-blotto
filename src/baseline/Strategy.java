@@ -1,35 +1,43 @@
 package baseline;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Stack;
-import java.util.Random;
+import java.util.*;
 
 public class Strategy implements Comparable<Strategy> {
     private final int[] strategy;
-    private double probability;
-    private int utilityThisRound;
-    private int playsThisRound;
+    private final Map<Strategy, Integer> sumD;  // sumD.get(s) is the sum of difference in it's payoff up to time t
+                                                // of not choosing s when they chose this strategy
+    private double probability;                 // current probability
+    private double averageProb;                 // average probability
 
-    // Construct new strategy with random disbursement of troops
-    public Strategy(int troopCount, double initialFitness) {
-        strategy = new int[ColonelBlotto.NUMBER_OF_BATTLEFIELDS];
-        probability = initialFitness;
+    /**
+     * Construct a new strategy with a random allocation of troops.
+     *
+     * @param numberOfBattlefields the number of battlefields in this instance of Colonel Blotto
+     * @param poolSize             the size of strategy pool that this strategy is in
+     * @param troopCount           the number of troops the player can allocate
+     */
+    public Strategy(int numberOfBattlefields, int poolSize, int troopCount) {
+        strategy = new int[numberOfBattlefields];
+        sumD = new HashMap<>(poolSize);
+        probability = 1.0 / poolSize;
 
-        // Randomly disburse the troops
+        // Randomly allocate the troops
         Random random = new Random();
         int remainingTroops = troopCount;
         while (remainingTroops-- > 0) {
-            strategy[random.nextInt(ColonelBlotto.NUMBER_OF_BATTLEFIELDS)]++;
+            strategy[random.nextInt(numberOfBattlefields)]++;
         }
-        playsThisRound = 0;
-        utilityThisRound = 0;
     }
 
-    // Crossover parents to create child
-    public Strategy(Strategy[] parents, int troopCount, double initialFitness) {
-        strategy = new int[ColonelBlotto.NUMBER_OF_BATTLEFIELDS];
-        probability = initialFitness;
+    /**
+     * Construct a new strategy by the method of crossover.
+     *
+     * @param parents the parent strategies
+     * @param loser   the losing player's strategy pool
+     */
+    public Strategy(Strategy[] parents, StrategyPool loser) {
+        strategy = new int[parents[0].getNumberOfBattlefields()];
+        sumD = new HashMap<>(loser.size());
 
         // Stack to hold battlefield indices for random selection
         Stack<Integer> battlefieldIndices = new Stack<>();
@@ -40,10 +48,10 @@ public class Strategy implements Comparable<Strategy> {
 
         // Randomly choose battlefields from each parent to copy to child up to troop count of player
         Random random = new Random();
-        int remainingTroops = troopCount, battlefield = -1;
+        int remainingTroops = loser.getTroopCount(), battlefield = -1;
         for (int i = 0; i < strategy.length && remainingTroops > 0; i++) {
             // Select which parent to take troops from
-            Strategy parent = parents[random.nextInt(parents.length)];
+            Strategy parent = parents[random.nextInt(2)];
 
             // Select which battlefield to take troops from
             battlefield = battlefieldIndices.pop();
@@ -53,61 +61,114 @@ public class Strategy implements Comparable<Strategy> {
 
             remainingTroops -= parent.getBattlefieldTroops(battlefield);
         }
+
         // Ensure troop count for action is correct. Add or subtract the last battlefield visited
         if (remainingTroops != 0) {
             strategy[battlefield] += remainingTroops;
         }
-        playsThisRound = 0;
-        utilityThisRound = 0;
     }
 
-    public void updateUtilityThisRound(int utilityThisRound) {
-        playsThisRound++;
-        this.utilityThisRound += utilityThisRound;
-    }
-
-    public void resetPlay() {
-        playsThisRound = 0;
-        utilityThisRound = 0;
-    }
-
-    public void setProbability(double probability) {
-        this.probability = probability;
-    }
-
+    /**
+     * @return the current probability
+     */
     public double getProbability() {
         return probability;
     }
 
-    public int getUtilityThisRound() {
-        return utilityThisRound;
+    /**
+     * Set the current probability.
+     *
+     * @param probability the current probability
+     */
+    public void setProbability(double probability) {
+        this.probability = probability;
     }
 
-    public int getPlaysThisRound() {
-        return playsThisRound;
+    /**
+     * @return the average probability
+     */
+    public double getAverageProb() {
+        return averageProb;
     }
 
+    /**
+     * Set the average probability
+     *
+     * @param averageProb the average probability
+     */
+    public void setAverageProb(double averageProb) {
+        this.averageProb = averageProb;
+    }
+
+    /**
+     * @param anotherStrat another strategy within this player's strategy pool
+     * @return the sum of difference in it's payoff up to this timestep of not choosing anotherStrat when they chose this strategy
+     */
+    public int getPayoffDifferenceSum(Strategy anotherStrat) {
+        return sumD.get(anotherStrat);
+    }
+
+    /**
+     * Update the sum of difference in it's payoff up to this timestep of not choosing anotherStrat when they chose this strategy.
+     *
+     * @param anotherStrat another strategy within this player's strategy pool
+     * @param utility      the difference of utility between playing anotherStrat or this strategy against the opponent's strategy
+     */
+    public void updatePayoffDifferenceSum(Strategy anotherStrat, int utility) {
+        sumD.put(anotherStrat, sumD.getOrDefault(anotherStrat, 0) + utility);
+    }
+
+    /**
+     * @return the number of battlefields in this instance of Colonel Blotto
+     */
+    public int getNumberOfBattlefields() {
+        return strategy.length;
+    }
+
+    /**
+     * @param index the index of the battlefield
+     * @return the number of troops on battlefield index
+     */
     public int getBattlefieldTroops(int index) {
         return strategy[index];
     }
 
+    /**
+     * Swap the number of troops on battlefield1 & battlefield2.
+     *
+     * @param battlefield1 the index of a battlefield
+     * @param battlefield2 the index of another battlefield
+     */
     public void swapTroops(int battlefield1, int battlefield2) {
         int temp = strategy[battlefield1];
         strategy[battlefield1] = strategy[battlefield2];
         strategy[battlefield2] = temp;
     }
 
+    /**
+     * Ready the strategy for the next game of Colonel Blotto.
+     *
+     * @param poolSize the size of strategy pool that this strategy is in
+     */
+    public void resetStrategy(int poolSize) {
+        probability = 1.0 / poolSize;
+        sumD.clear();
+    }
+
     @Override
     public int compareTo(Strategy strategy) {
-        return Double.compare(probability, strategy.probability);
+        return Double.compare(averageProb, strategy.averageProb);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Strategy strategy1 = (Strategy) o;
-        return Arrays.equals(strategy, strategy1.strategy);
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return Arrays.equals(strategy, ((Strategy) o).strategy);
     }
 
     @Override
@@ -119,8 +180,8 @@ public class Strategy implements Comparable<Strategy> {
     public String toString() {
         StringBuilder description = new StringBuilder("|");
         for (int battlefieldTroops : strategy) {
-            description.append(battlefieldTroops).append("|");
+            description.append(String.format("%02d", battlefieldTroops)).append("|");
         }
-        return description.append(" Prob: ").append(probability).append("\n").toString();
+        return description.append(" Prob: ").append(averageProb).toString();
     }
 }
