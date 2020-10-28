@@ -6,8 +6,9 @@ public class Strategy implements Comparable<Strategy> {
     private final int[] strategy;
     private final Map<Strategy, Integer> sumD;  // sumD.get(s) is the sum of difference in it's payoff up to time t
                                                 // of not choosing s when they chose this strategy
-    private double probability;                 // current probability
     private double averageProb;                 // average probability
+    private double probability;                 // current probability
+    private double expectedValue;               // expected value/fitness
 
     /**
      * Construct a new strategy with a random allocation of troops.
@@ -32,12 +33,12 @@ public class Strategy implements Comparable<Strategy> {
     /**
      * Construct a new strategy by the method of crossover.
      *
-     * @param parents the parent strategies
-     * @param loser   the losing player's strategy pool
+     * @param parents    the parent strategies
+     * @param troopCount the number of troops for losing player's strategy pool
      */
-    public Strategy(Strategy[] parents, StrategyPool loser) {
+    public Strategy(Strategy[] parents, int troopCount) {
         strategy = new int[parents[0].getNumberOfBattlefields()];
-        sumD = new HashMap<>(loser.size());
+        sumD = new HashMap<>();
 
         // Stack to hold battlefield indices for random selection
         Stack<Integer> battlefieldIndices = new Stack<>();
@@ -48,7 +49,7 @@ public class Strategy implements Comparable<Strategy> {
 
         // Randomly choose battlefields from each parent to copy to child up to troop count of player
         Random random = new Random();
-        int remainingTroops = loser.getTroopCount(), battlefield = -1;
+        int remainingTroops = troopCount, battlefield = -1;
         for (int i = 0; i < strategy.length && remainingTroops > 0; i++) {
             // Select which parent to take troops from
             Strategy parent = parents[random.nextInt(2)];
@@ -134,6 +135,22 @@ public class Strategy implements Comparable<Strategy> {
     }
 
     /**
+     * @return the expected value
+     */
+    public double getExpectedValue() {
+        return expectedValue;
+    }
+
+    /**
+     * Set the expected value.
+     *
+     * @param expectedValue the expected value
+     */
+    public void setExpectedValue(double expectedValue) {
+        this.expectedValue = expectedValue;
+    }
+
+    /**
      * Swap the number of troops on battlefield1 & battlefield2.
      *
      * @param battlefield1 the index of a battlefield
@@ -157,7 +174,7 @@ public class Strategy implements Comparable<Strategy> {
 
     @Override
     public int compareTo(Strategy strategy) {
-        return Double.compare(averageProb, strategy.averageProb);
+        return Double.compare(expectedValue, strategy.expectedValue);
     }
 
     @Override

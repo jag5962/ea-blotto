@@ -1,7 +1,7 @@
 package baseline;
 
 /**
- * The base line for finding optimal mixed strategies in Colonel Blotto. Regret-matching is used to determine the
+ * The baseline for finding optimal mixed strategies in Colonel Blotto. Regret-matching is used to determine the
  * probabilities for every pure strategy. This instance of Colonel Blotto uses static strategy pool sizes and
  * distinctly increasing battlefield payoffs.
  *
@@ -40,6 +40,9 @@ public class ColonelBlotto {
                 player1.update(player1Strat, player2Strat, player1Util);
                 player2.update(player2Strat, player1Strat, player2Util);
             }
+
+            // Calculate expected value for all the strategies for both players
+            EA.evaluateFitness(player1, player2);
 
             System.out.println("Game " + g);
             System.out.println("Player1 wins: " + player1Wins + ", Player2 wins: " + player2Wins);

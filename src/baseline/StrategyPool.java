@@ -38,6 +38,7 @@ public class StrategyPool implements Iterable<Strategy> {
         strategyPool = strategySet.toArray(new Strategy[0]);
         troopCount = loser.troopCount;
         mu = loser.mu;
+        resetStrategies();
     }
 
     /**
@@ -56,7 +57,7 @@ public class StrategyPool implements Iterable<Strategy> {
     }
 
     /**
-     * Choose the next strategy based on their current probability
+     * Choose the next strategy based on their current probability.
      *
      * @return the strategy
      */
@@ -74,7 +75,7 @@ public class StrategyPool implements Iterable<Strategy> {
     }
 
     /**
-     * Update the accumulated regret and probabilities based on the strategies used
+     * Update the accumulated regret and probabilities based on the strategies used.
      *
      * @param myStrat    the index of hero's action
      * @param theirStrat the villian's soldier allocation
@@ -109,9 +110,15 @@ public class StrategyPool implements Iterable<Strategy> {
         for (Strategy strat : strategyPool) {
             strat.setAverageProb(((timestep - 1) * strat.getAverageProb() + strat.getProbability()) / timestep);
         }
+    }
 
-        // Sort strategies in descending order by their average probabilities
-        Arrays.sort(strategyPool, Collections.reverseOrder());
+    /**
+     * Reset the expected value for every strategy.
+     */
+    public void resetExpectedValues() {
+        for (Strategy strat : strategyPool) {
+            strat.setExpectedValue(0);
+        }
     }
 
     /**
@@ -122,6 +129,13 @@ public class StrategyPool implements Iterable<Strategy> {
             strategy.resetStrategy(size());
         }
         timestep = 0;
+    }
+
+    /**
+     * Sort the strategies in descending order by their expected value.
+     */
+    public void sort() {
+        Arrays.sort(strategyPool, Collections.reverseOrder());
     }
 
     /**
