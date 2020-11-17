@@ -6,31 +6,31 @@ import java.util.HashSet;
 import java.util.TreeSet;
 
 public class EA {
-    private static final double ELITISM_RATE = .2;   // The rate to bring the elite strategies to the next generation
-    private static final double MUTATION_RATE = .05; // The rate to mutate an offspring
-    private static final Random RANDOM = new Random();
+    public static final double ELITISM_RATE = .2;   // The rate to bring the elite schemes to the next generation
+    public static final double MUTATION_RATE = .05; // The rate to mutate an offspring
+    public static final Random RANDOM = new Random();
 
     /**
-     * Evaluate the expected value for each strategy. This is a competitive co-evolution fitness function.
+     * Evaluate the expected value for each scheme. This is a competitive co-evolution fitness function.
      *
      * @param player1 the strategy pool of player 1
      * @param player2 the strategy pool of player 2
      */
-    public static void evaluateFitness(StrategyPool player1, StrategyPool player2) {
+    public static void evaluateFitness(Strategy player1, Strategy player2) {
         player1.resetExpectedValues();
         player2.resetExpectedValues();
 
-        for (Strategy strat1 : player1) {
-            for (Strategy strat2 : player2) {
-                int p1Utility = ColonelBlotto.utility(strat1, strat2);
+        for (Scheme scheme1 : player1) {
+            for (Scheme scheme2 : player2) {
+                int p1Utility = BaselineDriver.utility(scheme1, scheme2);
 
-                double expectedValue = strat1.getExpectedValue();
-                expectedValue += strat2.getAverageProb() * p1Utility;
-                strat1.setExpectedValue(expectedValue);
+                double expectedValue = scheme1.getExpectedValue();
+                expectedValue += scheme2.getAverageProb() * p1Utility;
+                scheme1.setExpectedValue(expectedValue);
 
-                expectedValue = strat2.getExpectedValue();
-                expectedValue += strat1.getAverageProb() * -p1Utility;
-                strat2.setExpectedValue(expectedValue);
+                expectedValue = scheme2.getExpectedValue();
+                expectedValue += scheme1.getAverageProb() * -p1Utility;
+                scheme2.setExpectedValue(expectedValue);
             }
         }
 
@@ -39,14 +39,15 @@ public class EA {
     }
 
     /**
-     * Evolve the strategy pool for loser.
+     * Evolve the strategy for loser.
      *
-     * @param loser the losing player's strategy pool
-     * @return the evolved strategy pool for this player
+     * @param loser        the losing player's strategy pool
+     * @param strategySize the size of the strategy
+     * @return the evolved strategy for this player
      */
-    public static StrategyPool evolve(StrategyPool loser) {
-        // Use a set to prohibit duplicate strategies
-        Set<Strategy> strategySet = new HashSet<>();
+    public static Strategy evolve(Strategy loser, int strategySize) {
+        // Use a set to prohibit duplicate schemes
+        Set<Scheme> strategySet = new HashSet<>();
 
         // Copy elites to next generation
         int eliteCount = (int) Math.ceil(ELITISM_RATE * loser.size());
@@ -54,13 +55,13 @@ public class EA {
             strategySet.add(loser.get(i));
         }
 
-        // Use reproduction and mutation to fill the rest of the new strategy pool
-        while (strategySet.size() < loser.size()) {
-            // Select 2 parent strategies for crossover using tournament selection
-            Strategy[] parents = selectParents(loser);
+        // Use reproduction and mutation to fill the rest of the new strategy
+        while (strategySet.size() < strategySize) {
+            // Select 2 parent schemes for crossover using tournament selection
+            Scheme[] parents = selectParents(loser);
 
-            // Use crossover to produce child strategy
-            Strategy child = crossover(parents, loser.getTroopCount());
+            // Use crossover to produce child schemes
+            Scheme child = crossover(parents, loser.getTroopCount());
 
             // Mutate with probability
             if (RANDOM.nextDouble() < MUTATION_RATE) {
@@ -69,52 +70,52 @@ public class EA {
             strategySet.add(child);
         }
 
-        return new StrategyPool(loser, strategySet);
+        return new Strategy(loser, strategySet);
     }
 
     /**
-     * Select two parent strategies to produce a child strategy using tournament selection. First part of reproduction.
+     * Select two parent schemes to produce a child scheme using tournament selection. First part of reproduction.
      *
-     * @param loser the losing player's strategy pool
-     * @return two strategies from loser
+     * @param loser the losing player's strategy
+     * @return two schemes from loser
      */
-    protected static Strategy[] selectParents(StrategyPool loser) {
+    public static Scheme[] selectParents(Strategy loser) {
         final int tournamentSize = (int) Math.max(Math.ceil(ELITISM_RATE * loser.size()), 5);
 
-        TreeSet<Strategy> tournament1 = new TreeSet<>();
+        TreeSet<Scheme> tournament1 = new TreeSet<>();
         while (tournament1.size() < tournamentSize) {
             tournament1.add(loser.get(RANDOM.nextInt(loser.size())));
         }
 
-        TreeSet<Strategy> tournament2 = new TreeSet<>();
+        TreeSet<Scheme> tournament2 = new TreeSet<>();
         while (tournament2.size() < tournamentSize) {
             tournament2.add(loser.get(RANDOM.nextInt(loser.size())));
         }
 
-        return new Strategy[]{tournament1.last(), tournament2.last()};
+        return new Scheme[]{tournament1.last(), tournament2.last()};
     }
 
     /**
      * Perform the crossover portion of reproduction.
      *
-     * @param parents    the two parent strategies
-     * @param troopCount the number of troops for losing player's strategy pool
-     * @return the child strategy
+     * @param parents    the two parent schemes
+     * @param troopCount the number of troops for losing player's strategy
+     * @return the child scheme
      */
-    protected static Strategy crossover(Strategy[] parents, int troopCount) {
-        return new Strategy(parents, troopCount);
+    public static Scheme crossover(Scheme[] parents, int troopCount) {
+        return new Scheme(parents, troopCount);
     }
 
     /**
-     * Mutate the strategy by swapping troops between two battlefields.
+     * Mutate the scheme by swapping troops between two battlefields.
      *
-     * @param strategy the strategy to mutate
+     * @param scheme the scheme to mutate
      */
-    protected static void mutate(Strategy strategy) {
-        int battlefield1 = RANDOM.nextInt(strategy.getNumberOfBattlefields()), battlefield2;
+    protected static void mutate(Scheme scheme) {
+        int battlefield1 = RANDOM.nextInt(scheme.getNumberOfBattlefields()), battlefield2;
         do {
-            battlefield2 = RANDOM.nextInt(strategy.getNumberOfBattlefields());
+            battlefield2 = RANDOM.nextInt(scheme.getNumberOfBattlefields());
         } while (battlefield2 == battlefield1);
-        strategy.swapTroops(battlefield1, battlefield2);
+        scheme.swapTroops(battlefield1, battlefield2);
     }
 }

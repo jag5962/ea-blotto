@@ -2,203 +2,177 @@ package baseline;
 
 import java.util.*;
 
-public class Strategy implements Comparable<Strategy> {
-    private final int[] strategy;
-    private final Map<Strategy, Integer> sumD;  // sumD.get(s) is the sum of difference in it's payoff up to time t
-                                                // of not choosing s when they chose this strategy
-    private double averageProb;                 // average probability
-    private double probability;                 // current probability
-    private double expectedValue;               // expected value/fitness
+public class Strategy implements Iterable<Scheme> {
+    private static final Random RANDOM = new Random();
+    private Scheme[] strategy;    // Holds the schemes in descending order of expected payoff
+    private final int troopCount; // Used in crossover share with resulting child
+    private int mu;
+    private int timestep;         // The current timestep
 
     /**
-     * Construct a new strategy with a random allocation of troops.
+     * Construct a strategy of schemes with randomly allocated troops.
      *
      * @param numberOfBattlefields the number of battlefields in this instance of Colonel Blotto
-     * @param poolSize             the size of strategy pool that this strategy is in
+     * @param size                 the number of schemes in the strategy
      * @param troopCount           the number of troops the player can allocate
      */
-    public Strategy(int numberOfBattlefields, int poolSize, int troopCount) {
-        strategy = new int[numberOfBattlefields];
-        sumD = new HashMap<>(poolSize);
-        probability = 1.0 / poolSize;
-
-        // Randomly allocate the troops
-        Random random = new Random();
-        int remainingTroops = troopCount;
-        while (remainingTroops-- > 0) {
-            strategy[random.nextInt(numberOfBattlefields)]++;
+    public Strategy(int numberOfBattlefields, int size, int troopCount) {
+        Set<Scheme> strategySet = new HashSet<>(size);
+        while (strategySet.size() < size) {
+            strategySet.add(new Scheme(numberOfBattlefields, size, troopCount));
         }
+        strategy = strategySet.toArray(new Scheme[0]);
+        this.troopCount = troopCount;
+
+        // Suggested that mu >= ([number of schemes] - 1) * (Max difference in utility)
+        mu = (size - 1) * (1 - (-1));
     }
 
     /**
-     * Construct a new strategy by the method of crossover.
+     * Construct a strategy from the previous strategy.
      *
-     * @param parents    the parent strategies
-     * @param troopCount the number of troops for losing player's strategy pool
+     * @param loser       the losing player's strategy
+     * @param strategySet the set of distinct schemes evolved from loser
      */
-    public Strategy(Strategy[] parents, int troopCount) {
-        strategy = new int[parents[0].getNumberOfBattlefields()];
-        sumD = new HashMap<>();
-
-        // Stack to hold battlefield indices for random selection
-        Stack<Integer> battlefieldIndices = new Stack<>();
-        for (int i = 0; i < strategy.length; i++) {
-            battlefieldIndices.push(i);
-        }
-        Collections.shuffle(battlefieldIndices);
-
-        // Randomly choose battlefields from each parent to copy to child up to troop count of player
-        Random random = new Random();
-        int remainingTroops = troopCount, battlefield = -1;
-        for (int i = 0; i < strategy.length && remainingTroops > 0; i++) {
-            // Select which parent to take troops from
-            Strategy parent = parents[random.nextInt(2)];
-
-            // Select which battlefield to take troops from
-            battlefield = battlefieldIndices.pop();
-
-            // Copy troops to battlefield of child strategy
-            strategy[battlefield] = parent.getBattlefieldTroops(battlefield);
-
-            remainingTroops -= parent.getBattlefieldTroops(battlefield);
-        }
-
-        // Ensure troop count for action is correct. Add or subtract the last battlefield visited
-        if (remainingTroops != 0) {
-            strategy[battlefield] += remainingTroops;
-        }
+    public Strategy(Strategy loser, Set<Scheme> strategySet) {
+        strategy = strategySet.toArray(new Scheme[0]);
+        troopCount = loser.troopCount;
+        mu = (strategySet.size() - 1) * (1 - (-1));
+        resetStrategy();
     }
 
     /**
-     * @return the current probability
+     * @return the number of schemes
      */
-    public double getProbability() {
-        return probability;
-    }
-
-    /**
-     * Set the current probability.
-     *
-     * @param probability the current probability
-     */
-    public void setProbability(double probability) {
-        this.probability = probability;
-    }
-
-    /**
-     * @return the average probability
-     */
-    public double getAverageProb() {
-        return averageProb;
-    }
-
-    /**
-     * Set the average probability
-     *
-     * @param averageProb the average probability
-     */
-    public void setAverageProb(double averageProb) {
-        this.averageProb = averageProb;
-    }
-
-    /**
-     * @param anotherStrat another strategy within this player's strategy pool
-     * @return the sum of difference in it's payoff up to this timestep of not choosing anotherStrat when they chose this strategy
-     */
-    public int getPayoffDifferenceSum(Strategy anotherStrat) {
-        return sumD.get(anotherStrat);
-    }
-
-    /**
-     * Update the sum of difference in it's payoff up to this timestep of not choosing anotherStrat when they chose this strategy.
-     *
-     * @param anotherStrat another strategy within this player's strategy pool
-     * @param utility      the difference of utility between playing anotherStrat or this strategy against the opponent's strategy
-     */
-    public void updatePayoffDifferenceSum(Strategy anotherStrat, int utility) {
-        sumD.put(anotherStrat, sumD.getOrDefault(anotherStrat, 0) + utility);
-    }
-
-    /**
-     * @return the number of battlefields in this instance of Colonel Blotto
-     */
-    public int getNumberOfBattlefields() {
+    public int size() {
         return strategy.length;
     }
 
     /**
-     * @param index the index of the battlefield
-     * @return the number of troops on battlefield index
+     * @param index the index of the scheme
+     * @return the scheme at the index
      */
-    public int getBattlefieldTroops(int index) {
+    public Scheme get(int index) {
         return strategy[index];
     }
 
     /**
-     * @return the expected value
+     * Choose the next scheme based on their current probability.
+     *
+     * @return the scheme
      */
-    public double getExpectedValue() {
-        return expectedValue;
+    public Scheme getRandom() {
+        double selector = RANDOM.nextDouble();
+        int selection = 0;
+        while (selection < size()) {
+            selector -= get(selection).getProbability();
+            if (selector <= 0) {
+                return get(selection);
+            }
+            selection++;
+        }
+        return get(size() - 1);
     }
 
     /**
-     * Set the expected value.
+     * Update the accumulated regret and probabilities based on the schemes used.
      *
-     * @param expectedValue the expected value
+     * @param myScheme    the index of hero's action
+     * @param theirScheme the enemy's soldier allocation
+     * @param utility     the resulting utility from playing these schemes
      */
-    public void setExpectedValue(double expectedValue) {
-        this.expectedValue = expectedValue;
+    public void update(Scheme myScheme, Scheme theirScheme, int utility) {
+        timestep++;
+
+        for (Scheme scheme : strategy) {
+            myScheme.updatePayoffDifferenceSum(scheme, BaselineDriver.utility(scheme, theirScheme) - utility);
+        }
+
+        double sum = 0;
+        for (Scheme scheme : strategy) {
+            if (scheme != myScheme) {
+                int payoffDiffSum = myScheme.getPayoffDifferenceSum(scheme);
+                scheme.setProbability(payoffDiffSum > 0 ? 1.0 / timestep / mu * payoffDiffSum : 0);
+                sum += scheme.getProbability();
+            }
+        }
+
+        // Account for double precision error
+        if (Math.abs(sum - 1) < .00001) {
+            sum = 1;
+        }
+
+        if (sum > 1) {
+            throw new RuntimeException("Ooops!!!  Need a better mu");
+        }
+        myScheme.setProbability(1 - sum);
+
+        for (Scheme scheme : strategy) {
+            scheme.setAverageProb(((timestep - 1) * scheme.getAverageProb() + scheme.getProbability()) / timestep);
+        }
     }
 
     /**
-     * Swap the number of troops on battlefield1 & battlefield2.
-     *
-     * @param battlefield1 the index of a battlefield
-     * @param battlefield2 the index of another battlefield
+     * Reset the expected value for every scheme.
      */
-    public void swapTroops(int battlefield1, int battlefield2) {
-        int temp = strategy[battlefield1];
-        strategy[battlefield1] = strategy[battlefield2];
-        strategy[battlefield2] = temp;
+    public void resetExpectedValues() {
+        for (Scheme scheme : strategy) {
+            scheme.setExpectedValue(0);
+        }
     }
 
     /**
      * Ready the strategy for the next game of Colonel Blotto.
-     *
-     * @param poolSize the size of strategy pool that this strategy is in
      */
-    public void resetStrategy(int poolSize) {
-        probability = 1.0 / poolSize;
-        sumD.clear();
-    }
-
-    @Override
-    public int compareTo(Strategy strategy) {
-        return Double.compare(expectedValue, strategy.expectedValue);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    public void resetStrategy() {
+        for (Scheme scheme : strategy) {
+            scheme.resetScheme(size());
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        timestep = 0;
+    }
+
+    /**
+     * Sort the schemes in descending order by their expected value.
+     */
+    public void sort() {
+        Arrays.sort(strategy, Collections.reverseOrder());
+    }
+
+    /**
+     * @return the number of troops for this player
+     */
+    public int getTroopCount() {
+        return troopCount;
+    }
+
+    /**
+     * Reduce the size of the strategy if it contains schemes with 0 average probability.
+     */
+    public void adjustSize() {
+        List<Scheme> strategyList = new ArrayList<>();
+        for (Scheme scheme : strategy) {
+            if (scheme.getAverageProb() > 0) {
+                strategyList.add(scheme);
+            }
         }
-        return Arrays.equals(strategy, ((Strategy) o).strategy);
+        if (strategyList.size() != strategy.length) {
+            strategy = strategyList.toArray(new Scheme[0]);
+            mu = (strategy.length - 1) * (1 - (-1));
+        }
     }
 
     @Override
-    public int hashCode() {
-        return Arrays.hashCode(strategy);
+    public Iterator<Scheme> iterator() {
+        return Arrays.stream(strategy).iterator();
     }
 
     @Override
     public String toString() {
-        StringBuilder description = new StringBuilder("|");
-        for (int battlefieldTroops : strategy) {
-            description.append(String.format("%02d", battlefieldTroops)).append("|");
+        int i = 0;
+        StringBuilder description = new StringBuilder();
+        for (Scheme scheme : strategy) {
+            description.append(++i).append(": ").append(scheme).append(System.lineSeparator());
         }
-        return description.append(" Prob: ").append(averageProb).toString();
+        return description.toString();
     }
 }

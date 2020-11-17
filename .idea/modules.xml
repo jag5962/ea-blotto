@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/EA Colonel Blotto.iml" filepath="$PROJECT_DIR$/EA Colonel Blotto.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Play Colonel Blotto/Play Colonel Blotto.iml" filepath="$PROJECT_DIR$/Play Colonel Blotto/Play Colonel Blotto.iml" />
     </modules>
   </component>
 </project>
