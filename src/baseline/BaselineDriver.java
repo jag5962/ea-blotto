@@ -16,7 +16,7 @@ public class BaselineDriver {
     private static final int NUMBER_OF_BATTLEFIELDS = 10;
     private static final int GAMES = 50;
     private static final int ROUNDS_PER_GAME = 10_000;
-    private static final int STRATEGY_SIZE = 50;
+    private static final int STRATEGY_SIZE = 10;
 
     public static void main(String[] args) throws IOException {
         Gson gson = new Gson();
@@ -33,10 +33,10 @@ public class BaselineDriver {
 
                 for (int r = 0; r < ROUNDS_PER_GAME; r++) {
                     // Get a randomly chosen scheme for each player
-                    Scheme player1Strat = player1.getRandom();
-                    Scheme player2Strat = player2.getRandom();
+                    Scheme player1Scheme = player1.getRandom();
+                    Scheme player2Scheme = player2.getRandom();
 
-                    int player1Util = utility(player1Strat, player2Strat);
+                    int player1Util = utility(player1Scheme, player2Scheme);
                     int player2Util = -player1Util;
 
                     p1TotalUtil += player1Util;
@@ -48,8 +48,8 @@ public class BaselineDriver {
                         player2Wins++;
                     }
 
-                    player1.update(player1Strat, player2Strat, player1Util);
-                    player2.update(player2Strat, player1Strat, player2Util);
+                    player1.update(player1Scheme, player2Scheme, player1Util);
+                    player2.update(player2Scheme, player1Scheme, player2Util);
                 }
 
                 // Calculate expected value for all the schemes for both players
@@ -62,8 +62,8 @@ public class BaselineDriver {
                 System.out.println("Player1 wins: " + player1Wins + ", Player2 wins: " + player2Wins);
                 System.out.println("Player1 utility per game: " + (p1TotalUtil / ROUNDS_PER_GAME) + ", Player2 utility per game: " + (p2TotalUtil / ROUNDS_PER_GAME));
 
-                Strategy winner = p1TotalUtil > p2TotalUtil ? player1 : player1;
-                Strategy loser = p1TotalUtil > p2TotalUtil ? player1 : player1;
+                Strategy winner = p1TotalUtil > p2TotalUtil ? player1 : player2;
+                Strategy loser = p1TotalUtil > p2TotalUtil ? player2 : player1;
 
                 System.out.println("Player " + (p1TotalUtil > p2TotalUtil ? 1 : 2) + " Strategy:");
                 System.out.println(winner);
@@ -72,7 +72,7 @@ public class BaselineDriver {
 
                 // Generate new schemes for loser
                 if (p1TotalUtil > p2TotalUtil) {
-                    player2 = new Strategy(NUMBER_OF_BATTLEFIELDS, 50, 100);
+                    player2 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
                 } else {
                     player1 = EA.evolve(loser, STRATEGY_SIZE);
                 }

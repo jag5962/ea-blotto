@@ -80,7 +80,7 @@ public class EA {
      * @return two schemes from loser
      */
     public static Scheme[] selectParents(Strategy loser) {
-        final int tournamentSize = (int) Math.max(Math.ceil(ELITISM_RATE * loser.size()), 5);
+        final int tournamentSize = (int) Math.max(Math.ceil(ELITISM_RATE * loser.size()), 2);
 
         TreeSet<Scheme> tournament1 = new TreeSet<>();
         while (tournament1.size() < tournamentSize) {

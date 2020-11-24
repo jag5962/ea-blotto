@@ -25,8 +25,20 @@ public class Scheme implements Comparable<Scheme> {
         // Randomly allocate the troops
         Random random = new Random();
         int remainingTroops = troopCount;
-        while (remainingTroops-- > 0) {
-            scheme[random.nextInt(numberOfBattlefields)]++;
+//        while (remainingTroops-- > 0) {
+//            scheme[random.nextInt(numberOfBattlefields)]++;
+//        }
+
+        // Randomly allocate the troops V2
+        Stack<Integer> battlefieldIndices = createBattlefieldIndexStack();
+        while (remainingTroops > 0) {
+            int troopsToAllocate = random.nextInt((int) Math.ceil(remainingTroops / 2.) + 1);
+            scheme[battlefieldIndices.pop()] += troopsToAllocate;
+            remainingTroops -= troopsToAllocate;
+
+            if (battlefieldIndices.isEmpty()) {
+                battlefieldIndices = createBattlefieldIndexStack();
+            }
         }
     }
 
@@ -41,11 +53,7 @@ public class Scheme implements Comparable<Scheme> {
         sumD = new HashMap<>();
 
         // Stack to hold battlefield indices for random selection
-        Stack<Integer> battlefieldIndices = new Stack<>();
-        for (int i = 0; i < scheme.length; i++) {
-            battlefieldIndices.push(i);
-        }
-        Collections.shuffle(battlefieldIndices);
+        Stack<Integer> battlefieldIndices = createBattlefieldIndexStack();
 
         // Randomly choose battlefields from each parent to copy to child up to troop count of player
         Random random = new Random();
@@ -67,6 +75,20 @@ public class Scheme implements Comparable<Scheme> {
         if (remainingTroops != 0) {
             scheme[battlefield] += remainingTroops;
         }
+    }
+
+    /**
+     * Create a stack to hold battlefield indices for random selection
+     *
+     * @return a stack containing randomized battlefield indices
+     */
+    private Stack<Integer> createBattlefieldIndexStack() {
+        Stack<Integer> battlefieldIndices = new Stack<>();
+        for (int i = 0; i < scheme.length; i++) {
+            battlefieldIndices.push(i);
+        }
+        Collections.shuffle(battlefieldIndices);
+        return battlefieldIndices;
     }
 
     /**
@@ -186,7 +208,11 @@ public class Scheme implements Comparable<Scheme> {
 
     @Override
     public int compareTo(Scheme scheme) {
-        return Double.compare(expectedValue, scheme.expectedValue);
+        int compared = Double.compare(expectedValue, scheme.expectedValue);
+        if (compared == 0 && !equals(scheme)) {
+            return 1;
+        }
+        return compared;
     }
 
     @Override
@@ -211,6 +237,6 @@ public class Scheme implements Comparable<Scheme> {
         for (int battlefieldTroops : scheme) {
             description.append(String.format("%02d", battlefieldTroops)).append("|");
         }
-        return description.append(" Prob: ").append(averageProb).toString();
+        return description.append(" CProb: ").append(probability).append(" Prob: ").append(averageProb).toString();
     }
 }

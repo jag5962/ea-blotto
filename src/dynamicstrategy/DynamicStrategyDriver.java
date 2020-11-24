@@ -12,7 +12,7 @@ public class DynamicStrategyDriver {
     private static final int NUMBER_OF_BATTLEFIELDS = 10;
     private static final int GAMES = 50;
     private static final int ROUNDS_PER_GAME = 10_000;
-    private static final int STRATEGY_SIZE = 50;
+    private static final int STRATEGY_SIZE = 10;
 
     public static void main(String[] args) {
         Strategy player1 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);

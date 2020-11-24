@@ -15,11 +15,11 @@ public class CoevolvedDriver {
     private static final int NUMBER_OF_BATTLEFIELDS = 10;
     private static final int GAMES = 50;
     private static final int ROUNDS_PER_GAME = 10_000;
-    private static final int STRATEGY_SIZE = 50;
+    private static final int STRATEGY_SIZE = 10;
 
     public static void main(String[] args) throws IOException {
         Gson gson = new Gson();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1; i++) {
             Strategy player1 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
             Strategy player2 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
 
@@ -76,11 +76,11 @@ public class CoevolvedDriver {
 
             // Save strategy to JSON file
             String jsonString = gson.toJson(player1);
-            FileWriter myWriter = new FileWriter("strategies/coevolved/" + i + "a.json");
+            FileWriter myWriter = new FileWriter("strategies/coevolvedA/" + i + ".json");
             myWriter.write(jsonString);
             myWriter.close();
             jsonString = gson.toJson(player2);
-            myWriter = new FileWriter("strategies/coevolved/" + i + "b.json");
+            myWriter = new FileWriter("strategies/coevolvedB/" + i + ".json");
             myWriter.write(jsonString);
             myWriter.close();
         }
