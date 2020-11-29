@@ -4,7 +4,6 @@ import baseline.*;
 import com.google.gson.Gson;
 
 import java.io.FileWriter;
-import java.io.IOException;
 
 public class SearchDriver {
     private static final int NUMBER_OF_BATTLEFIELDS = 10;
@@ -12,16 +11,20 @@ public class SearchDriver {
     private static final int ROUNDS_PER_GAME = 10_000;
     private static final int STRATEGY_SIZE = 10;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
+        final boolean write = false;
         Gson gson = new Gson();
-        for (int i = 0; i < 1; i++) {
+
+        for (int s = 0; s < (write ? 100 : 1); s++) {
             Strategy player1 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
             Strategy player2 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
 
             double avgUtilPerGame1 = 0;
             double avgUtilPerGame2 = 0;
+            double p1WinPercent = 0;
 
-            for (int g = 1; g <= GAMES; g++) {
+            // Terminates once at least GAMES games are played, p1 win percent is 75%-90% and all schemes have a positive prob.
+            for (int g = 1; g <= GAMES || p1WinPercent > .9 || p1WinPercent < .75 || player1.hasZeroProbabilities(); g++) {
                 int player1Wins = 0, player2Wins = 0;
                 double p1TotalUtil = 0, p2TotalUtil = 0;
 
@@ -52,17 +55,21 @@ public class SearchDriver {
                 avgUtilPerGame1 += (p1TotalUtil / ROUNDS_PER_GAME);
                 avgUtilPerGame2 += (p2TotalUtil / ROUNDS_PER_GAME);
 
-                System.out.println("Game " + g);
-                System.out.println("Player1 wins: " + player1Wins + ", Player2 wins: " + player2Wins);
-                System.out.println("Player1 utility per game: " + (p1TotalUtil / ROUNDS_PER_GAME) + ", Player2 utility per game: " + (p2TotalUtil / ROUNDS_PER_GAME));
-
                 Strategy winner = p1TotalUtil > p2TotalUtil ? player1 : player2;
                 Strategy loser = p1TotalUtil > p2TotalUtil ? player2 : player1;
 
-                System.out.println("Player " + (p1TotalUtil > p2TotalUtil ? 1 : 2) + " Strategy:");
-                System.out.println(winner);
-                System.out.println("Player " + (p1TotalUtil > p2TotalUtil ? 2 : 1) + " Strategy:");
-                System.out.println(loser);
+                p1WinPercent = player1Wins / (double) ROUNDS_PER_GAME;
+
+                if (!write) {
+                    System.out.println("Game " + g);
+                    System.out.println("Player1 wins: " + player1Wins + ", Player2 wins: " + player2Wins);
+                    System.out.println("Player1 utility per game: " + (p1TotalUtil / ROUNDS_PER_GAME) + ", Player2 utility per game: " + (p2TotalUtil / ROUNDS_PER_GAME));
+
+                    System.out.println("Player " + (p1TotalUtil > p2TotalUtil ? 1 : 2) + " Strategy:");
+                    System.out.println(winner);
+                    System.out.println("Player " + (p1TotalUtil > p2TotalUtil ? 2 : 1) + " Strategy:");
+                    System.out.println(loser);
+                }
 
                 // Generate new schemes for loser
                 if (p1TotalUtil > p2TotalUtil) {
@@ -75,14 +82,16 @@ public class SearchDriver {
                 winner.resetStrategy();
             }
 
-            // Save strategy to JSON file
-            String jsonString = gson.toJson(player1);
-            FileWriter myWriter = new FileWriter("strategies/search/" + i + ".json");
-            myWriter.write(jsonString);
-            myWriter.close();
-
-            System.out.println("\nPlayer1 avg util: " + avgUtilPerGame1 / GAMES);
-            System.out.println("Player2 avg util: " + avgUtilPerGame2 / GAMES);
+            if (write) {
+                // Save strategy to JSON file
+                System.out.print("\r" + s);
+                try (FileWriter file = new FileWriter("strategies/search/" + s + ".json")) {
+                    file.write(gson.toJson(player1));
+                }
+            } else {
+                System.out.println("\nPlayer1 avg util: " + avgUtilPerGame1 / GAMES);
+                System.out.println("Player2 avg util: " + avgUtilPerGame2 / GAMES);
+            }
         }
     }
 }

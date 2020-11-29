@@ -4,10 +4,10 @@ import java.util.*;
 
 public class Strategy implements Iterable<Scheme> {
     private static final Random RANDOM = new Random();
-    private Scheme[] strategy;    // Holds the schemes in descending order of expected payoff
-    private final int troopCount; // Used in crossover share with resulting child
-    private int mu;
-    private int timestep;         // The current timestep
+    private Scheme[] strategy;              // Holds the schemes in descending order of expected payoff
+    private transient final int troopCount; // Used in crossover share with resulting child
+    private transient int mu;
+    private transient int timestep;         // The current timestep
 
     /**
      * Construct a strategy of schemes with randomly allocated troops.
@@ -16,7 +16,7 @@ public class Strategy implements Iterable<Scheme> {
      * @param size                 the number of schemes in the strategy
      * @param troopCount           the number of troops the player can allocate
      */
-    public Strategy(int numberOfBattlefields, int size, int troopCount) {
+    public Strategy(int numberOfBattlefields, int size, int troopCount) throws Exception {
         Set<Scheme> strategySet = new HashSet<>(size);
         while (strategySet.size() < size) {
             strategySet.add(new Scheme(numberOfBattlefields, size, troopCount));
@@ -77,7 +77,7 @@ public class Strategy implements Iterable<Scheme> {
     /**
      * Update the accumulated regret and probabilities based on the schemes used.
      *
-     * @param myScheme    the index of hero's action
+     * @param myScheme    the recently played scheme this player
      * @param theirScheme the enemy's soldier allocation
      * @param utility     the resulting utility from playing these schemes
      */
@@ -161,6 +161,20 @@ public class Strategy implements Iterable<Scheme> {
         }
     }
 
+    /**
+     * Check if strategy has schemes with zero average probabilities.
+     *
+     * @return false if all probabilities are greater than 0, true otherwise
+     */
+    public boolean hasZeroProbabilities() {
+        for (Scheme scheme : strategy) {
+            if (scheme.getAverageProb() < .0000001) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public Iterator<Scheme> iterator() {
         return Arrays.stream(strategy).iterator();
@@ -171,7 +185,7 @@ public class Strategy implements Iterable<Scheme> {
         int i = 0;
         StringBuilder description = new StringBuilder();
         for (Scheme scheme : strategy) {
-            description.append(++i).append(": ").append(scheme).append(System.lineSeparator());
+            description.append(String.format("%2d", ++i)).append(": ").append(scheme).append(System.lineSeparator());
         }
         return description.toString();
     }

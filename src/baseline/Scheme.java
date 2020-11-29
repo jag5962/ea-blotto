@@ -4,11 +4,11 @@ import java.util.*;
 
 public class Scheme implements Comparable<Scheme> {
     private final int[] scheme;
-    private final Map<Scheme, Integer> sumD;    // sumD.get(s) is the sum of difference in it's payoff up to time t
+    private transient final Map<Scheme, Integer> sumD; // sumD.get(s) is the sum of difference in it's payoff up to time t
                                                 // of not choosing s when they chose this scheme
     private double averageProb;                 // average probability
-    private double probability;                 // current probability
-    private double expectedValue;               // expected value/fitness
+    private transient double probability;       // current probability
+    private transient double expectedValue;     // expected value/fitness
 
     /**
      * Construct a new scheme with a random allocation of troops.
@@ -17,7 +17,7 @@ public class Scheme implements Comparable<Scheme> {
      * @param strategySize         the size of strategy that this scheme is in
      * @param troopCount           the number of troops the player can allocate
      */
-    public Scheme(int numberOfBattlefields, int strategySize, int troopCount) {
+    public Scheme(int numberOfBattlefields, int strategySize, int troopCount) throws Exception {
         scheme = new int[numberOfBattlefields];
         sumD = new HashMap<>(strategySize);
         probability = 1.0 / strategySize;
@@ -39,6 +39,9 @@ public class Scheme implements Comparable<Scheme> {
             if (battlefieldIndices.isEmpty()) {
                 battlefieldIndices = createBattlefieldIndexStack();
             }
+        }
+        if (Arrays.stream(scheme).sum() > 100) {
+            throw new Exception(this + ": " + Arrays.stream(scheme).sum());
         }
     }
 
@@ -210,7 +213,8 @@ public class Scheme implements Comparable<Scheme> {
     public int compareTo(Scheme scheme) {
         int compared = Double.compare(expectedValue, scheme.expectedValue);
         if (compared == 0 && !equals(scheme)) {
-            return 1;
+            int util = baseline.BaselineDriver.utility(this, scheme);
+            return util != 0 ? util : 1;
         }
         return compared;
     }
@@ -235,8 +239,8 @@ public class Scheme implements Comparable<Scheme> {
     public String toString() {
         StringBuilder description = new StringBuilder("|");
         for (int battlefieldTroops : scheme) {
-            description.append(String.format("%02d", battlefieldTroops)).append("|");
+            description.append(String.format("%2d", battlefieldTroops)).append("|");
         }
-        return description.append(" CProb: ").append(probability).append(" Prob: ").append(averageProb).toString();
+        return description.append(" Prob: ").append(averageProb).toString();
     }
 }

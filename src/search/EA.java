@@ -48,7 +48,7 @@ public class EA {
      * @param scheme the scheme to mutate
      * @param winner the pool of strategies that won
      */
-    protected static void mutate(Scheme scheme, Strategy winner) {
+    private static void mutate(Scheme scheme, Strategy winner) {
         final double BOUND = .25;
         double[] lossPercent = new double[scheme.getNumberOfBattlefields()];
         int[] largestDeficit = new int[lossPercent.length];

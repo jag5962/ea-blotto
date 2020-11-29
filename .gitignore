@@ -7,4 +7,6 @@
 # Editor-based HTTP Client requests
 .idea/httpRequests/
 
-/out/
+out
+libraries
+strategies

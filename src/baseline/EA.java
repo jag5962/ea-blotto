@@ -13,12 +13,15 @@ public class EA {
     /**
      * Evaluate the expected value for each scheme. This is a competitive co-evolution fitness function.
      *
-     * @param player1 the strategy pool of player 1
-     * @param player2 the strategy pool of player 2
+     * @param player1 the strategy of player 1
+     * @param player2 the strategy of player 2
      */
-    public static void evaluateFitness(Strategy player1, Strategy player2) {
+    public static void evaluateFitness(Strategy player1, Strategy player2) throws Exception {
         player1.resetExpectedValues();
         player2.resetExpectedValues();
+
+        validateAvgProbSum(player1);
+        validateAvgProbSum(player2);
 
         for (Scheme scheme1 : player1) {
             for (Scheme scheme2 : player2) {
@@ -39,9 +42,25 @@ public class EA {
     }
 
     /**
+     * Validate the sum of the average probabilities in a strategy is 1.
+     *
+     * @param strategy the strategy to validate
+     * @throws Exception if the sum of the average probabilities is not 1
+     */
+    private static void validateAvgProbSum(Strategy strategy) throws Exception {
+        double sum = 0;
+        for (Scheme scheme : strategy) {
+            sum += scheme.getAverageProb();
+        }
+        if ((Math.abs(sum - 1) > .00001)) {
+            throw new Exception("Sum: " + sum + System.lineSeparator() + strategy);
+        }
+    }
+
+    /**
      * Evolve the strategy for loser.
      *
-     * @param loser        the losing player's strategy pool
+     * @param loser        the losing player's strategy
      * @param strategySize the size of the strategy
      * @return the evolved strategy for this player
      */
@@ -111,7 +130,7 @@ public class EA {
      *
      * @param scheme the scheme to mutate
      */
-    protected static void mutate(Scheme scheme) {
+    private static void mutate(Scheme scheme) {
         int battlefield1 = RANDOM.nextInt(scheme.getNumberOfBattlefields()), battlefield2;
         do {
             battlefield2 = RANDOM.nextInt(scheme.getNumberOfBattlefields());

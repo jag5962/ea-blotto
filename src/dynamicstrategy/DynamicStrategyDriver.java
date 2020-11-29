@@ -14,7 +14,7 @@ public class DynamicStrategyDriver {
     private static final int ROUNDS_PER_GAME = 10_000;
     private static final int STRATEGY_SIZE = 10;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         Strategy player1 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
         Strategy player2 = new Strategy(NUMBER_OF_BATTLEFIELDS, STRATEGY_SIZE, 100);
 

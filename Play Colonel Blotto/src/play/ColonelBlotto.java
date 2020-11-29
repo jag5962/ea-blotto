@@ -19,7 +19,7 @@ import com.google.gson.Gson;
  */
 public class ColonelBlotto {
     private static final int NUMBER_OF_BATTLEFIELDS = 10;
-    private static final double GAMES = 10000;
+    private static final double GAMES = 10_000;
     private static final Gson GSON = new Gson();
     private static final Random RANDOM = new Random();
     private static Random BASELINE_RANDOM;
@@ -35,7 +35,7 @@ public class ColonelBlotto {
             BASELINE_RANDOM = new Random(baselineSeed);
             VARIANT_RANDOM = new Random(variantSeed);
 
-            long baselineWins = 0, variantWins = 0, ties = 0;
+            long baselineWins = 0, variantWins = 0;
             long baselinePayoff = 0, variantPayoff = 0;
             double baselineUtilTotal = 0, variantUtilTotal = 0;
 
@@ -64,15 +64,15 @@ public class ColonelBlotto {
                     baselineWins++;
                 } else if (baselineUtil < variantUtil) {
                     variantWins++;
-                } else {
-                    ties++;
                 }
             }
 
+            // Print results in a table
             System.out.println(System.lineSeparator() + approach);
-            System.out.printf("baseline wins: %.2f%%, %s wins: %.2f%%, Ties: %.2f%%%n", baselineWins / GAMES * 100, approach, variantWins / GAMES * 100, ties / GAMES * 100);
-            System.out.printf("baseline avg payoff: %.2f, %s avg payoff: %.2f%n", baselinePayoff / GAMES, approach, variantPayoff / GAMES);
-            System.out.printf("baseline utility per game: %s, %s utility per game: %s%n", baselineUtilTotal / GAMES, approach, variantUtilTotal / GAMES);
+            System.out.printf("%10s|%s|%s%n", "", "variant", "baseline");
+            System.out.printf("%-10s|%6.2f%%|%7.2f%%%n", "wins", variantWins / GAMES * 100, baselineWins / GAMES * 100);
+            System.out.printf("%-10s|%6.2f |%7.2f%n", "avg payoff", variantPayoff / GAMES, baselinePayoff / GAMES);
+            System.out.printf("%-10s|%6.2f |%7.2f%n", "util/game", variantUtilTotal / GAMES, baselineUtilTotal / GAMES);
         }
     }
 
