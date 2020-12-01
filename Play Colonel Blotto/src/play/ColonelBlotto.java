@@ -29,7 +29,7 @@ public class ColonelBlotto {
         long baselineSeed = System.currentTimeMillis();
         long variantSeed = System.nanoTime();
 
-        String[] approaches = new String[] {"coevolvedA", "coevolvedB", "search"};
+        String[] approaches = new String[] {"coevolvedA", "coevolvedB", "search", "dynamicstrategy"};
 
         for (String approach : approaches) {
             BASELINE_RANDOM = new Random(baselineSeed);

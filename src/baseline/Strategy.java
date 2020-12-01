@@ -146,19 +146,35 @@ public class Strategy implements Iterable<Scheme> {
     }
 
     /**
-     * Reduce the size of the strategy if it contains schemes with 0 average probability.
+     * Reduce the size of the strategy if it contains schemes with 0 average probability. Add schemes if
+     * a scheme has 90%+ probability.
      */
-    public void adjustSize() {
+    public void adjustSize(int originalStrategySize) throws Exception {
         List<Scheme> strategyList = new ArrayList<>();
+        boolean notDistributedWell = false;
+
+        // Remove schemes with 0 probability
         for (Scheme scheme : strategy) {
             if (scheme.getAverageProb() > 0) {
                 strategyList.add(scheme);
+
+                // Check if a scheme has 90%+ probability
+                if (scheme.getAverageProb() > .9) {
+                    notDistributedWell = true;
+                }
             }
         }
-        if (strategyList.size() != strategy.length) {
-            strategy = strategyList.toArray(new Scheme[0]);
-            mu = (strategy.length - 1) * (1 - (-1));
+
+        if (notDistributedWell && strategyList.size() < originalStrategySize) {
+            // Add schemes up to 2x original strategy size
+            int newStrategySize = Math.min((int) Math.round(size() * 1.25), originalStrategySize * 2);
+            for (int i = strategyList.size(); i < newStrategySize; i++) {
+                strategyList.add(new Scheme(strategy[0].getNumberOfBattlefields(), newStrategySize, 100));
+            }
         }
+
+        strategy = strategyList.toArray(new Scheme[0]);
+        mu = (strategy.length - 1) * (1 - (-1));
     }
 
     /**
