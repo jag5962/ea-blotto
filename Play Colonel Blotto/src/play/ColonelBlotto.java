@@ -1,9 +1,11 @@
 package play;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,9 +31,11 @@ public class ColonelBlotto {
         long baselineSeed = System.currentTimeMillis();
         long variantSeed = System.nanoTime();
 
-        String[] approaches = new String[] {"coevolvedA", "coevolvedB", "search", "dynamicstrategy"};
+        File file = new File("strategies");
+        String[] variations = file.list((current, name) -> new File(current, name).isDirectory() && !name.equalsIgnoreCase("baseline"));
+        Arrays.sort(variations);
 
-        for (String approach : approaches) {
+        for (String variation : variations) {
             BASELINE_RANDOM = new Random(baselineSeed);
             VARIANT_RANDOM = new Random(variantSeed);
 
@@ -44,7 +48,7 @@ public class ColonelBlotto {
                 Strategy baseline = getApproach("baseline");
 
                 // Randomly select a mixed strategy from different approach for player 2
-                Strategy variant = getApproach(approach);
+                Strategy variant = getApproach(variation);
 
                 // Get a randomly chosen scheme from each approach
                 Scheme baselineScheme = getRandom(baseline);
@@ -68,7 +72,7 @@ public class ColonelBlotto {
             }
 
             // Print results in a table
-            System.out.println(System.lineSeparator() + approach);
+            System.out.println(System.lineSeparator() + variation);
             System.out.printf("%10s|%s|%s%n", "", "variant", "baseline");
             System.out.printf("%-10s|%6.2f%%|%7.2f%%%n", "wins", variantWins / GAMES * 100, baselineWins / GAMES * 100);
             System.out.printf("%-10s|%6.2f |%7.2f%n", "avg payoff", variantPayoff / GAMES, baselinePayoff / GAMES);

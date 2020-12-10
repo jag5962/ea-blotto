@@ -17,7 +17,7 @@ public class CoevolvedDriver {
     private static final int STRATEGY_SIZE = 10;
 
     public static void main(String[] args) throws Exception {
-        final boolean write = true;
+        final boolean write = false;
         Gson gson = new Gson();
 
         for (int s = 0; s < (write ? 100 : 1); s++) {
